@@ -317,6 +317,8 @@ class P2P_Client(QtGui.QWidget):
                 self.startSendFrameThrd()  #开始视频帧的发送线程
             self.refresh()  #刷新列表
 
+        self.recv_pic = '0' * 36864
+
 
     def startMonitorThrd(self):
         t = threading.Thread(target=self.MonitorRecv,args=())
@@ -332,7 +334,8 @@ class P2P_Client(QtGui.QWidget):
             data = sock.recv(1024*1024*8)
             data = data.strip()
             if data[0] == PICHEAD:
-                data = PICHEAD + Decompress(data[1:])
+                # data = PICHEAD + Decompress(data[1:])
+                pass
             if data:
                 self.emit(QtCore.SIGNAL(_fromUtf8("ParseCmd(QString)")),_fromUtf8(data))
 
@@ -344,29 +347,35 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
+        self.freq = 1   #频率调为1s一帧
+        self.quality = 10  #####
         times = 0
         while True:
             try:
                 if transState == True and loginState == True:
+                    if udpPort and udpHost:
+                        pass
+                    else:
+                        print('line 357 ')
+                        continue
                     lock.acquire()
                     width = int(6.40 * self.quality)
                     height = int(4.80 * self.quality)
                     new_img = cv.CreateImage((width,height),8,3)
                     cv.Resize(self.img,new_img,0)
-                    data = copy.copy(new_img.tostring())
-                    data = Compress(data)
-                    data = PICHEAD + data
                     lock.release()
-                    # print("line 345, len(data) = %d" % len(data))
-                    if len(data) == 0:
-                        times += 1
-                        if times > 2:
-                            return
-                        continue
-                    if udpPort and udpHost:
-                        print('send %d bit' % len(data))
-                        sock.sendto(data,(udpHost,udpPort))
+                    data = copy.copy(new_img.tostring())  # length = 36864
+                    # data = Compress(data)
+                    length = len(data)
+                    index = 0
+                    step = 48  #每次发送 64*3 = 192 bit
+                    pices_length = 64 * 3
+                    for index in range(0,length,step):
+                        pices = data[index:index+pices_length]  # 单位发送长度
+                        pic = PICHEAD + ('%05s'%str(index)) + pices
+                        sock.sendto(pic,(udpHost,udpPort))
                     time.sleep(1./self.freq)
+                    print('send %d bit' % len(data))
                 else:
                     time.sleep(3)
             except Exception as e:
@@ -449,8 +458,15 @@ class P2P_Client(QtGui.QWidget):
     def ShowRecvPic(self):
         '''播放椄收到的帧'''
         data = str(self.picdata)
-        width,height = self.getPicSize(data)
-        if width==0:return
+        # width,height = self.getPicSize(data)
+        # if width==0:return
+        index = int(data[:5])
+        data = data[5:]
+        for i in range(index,index+len(data)):
+            self.recv_pic[i] = data[i-index]   #存入图片数据
+
+        if index < 30000:
+            return
 
         if self.FriendShow == True:
             pic = QtGui.QImage(data,width,height,QtGui.QImage.Format_RGB888).rgbSwapped()
