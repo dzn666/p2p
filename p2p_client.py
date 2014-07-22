@@ -347,7 +347,7 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
-        self.freq = 1   #频率调为1s一帧
+        self.freq = 0.5   #频率调为1s一帧
         self.quality = 10  #####
         times = 0
         while True:
@@ -462,8 +462,7 @@ class P2P_Client(QtGui.QWidget):
         # if width==0:return
         index = int(data[:5])
         data = data[5:]
-        for i in range(index,index+len(data)):
-            self.recv_pic[i] = data[i-index]   #存入图片数据
+        self.recv_pic = self.recv_pic[:index] + data + self.recv_pic[index+len(data):]  #存入图片数据
 
         if index < 30000:
             return
