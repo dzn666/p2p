@@ -49,6 +49,7 @@ FAILED      = '5'
 OPERATESUCCESS = '6'
 PICHEAD     = '7'
 HOLE = '8'
+DISCONNECT = '9'
 
 serveState = True
 transState = False
@@ -409,6 +410,8 @@ class P2P_Client(QtGui.QWidget):
                 self.clearList()
             elif data == HOLE:
                 print('收到打洞数据包')
+            elif data == DISCONNECT:
+                stopTrans()
             else:
                 print("unknown exception!:"+data)
                 pass
@@ -475,7 +478,8 @@ class P2P_Client(QtGui.QWidget):
             pass
         else:
             return
-
+        if len(data) != 36864:
+            return
         #利用收到的图片数据创建一张img
         image = cv.CreateMatHeader(1, len(data), cv.CV_8UC1)
         cv.SetData(image, data, len(data))
@@ -518,12 +522,15 @@ class P2P_Client(QtGui.QWidget):
 
     def closeEvent(self, QCloseEvent):
         '''重定义点击关闭按钮事件'''
-        reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-                                           _fromUtf8('你真的要退出?'),\
-                                           QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
-        if reply == QtGui.QMessageBox.Yes:
+        # reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
+        #                                    _fromUtf8('你真的要退出?'),\
+        #                                    QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
+        # if reply == QtGui.QMessageBox.Yes:
+        if True:
             self.logout(False)
             QCloseEvent.accept()
+            sock.sendto(DISCONNECT,(udpHost,udpPort))
+            sock.sendto(DISCONNECT,(udpHost,udpPort))
         else:
             QCloseEvent.ignore()
 
@@ -593,6 +600,8 @@ class P2P_Client(QtGui.QWidget):
         transState = False
         lock.release()
         print("已断开视频连接")
+        sock.sendto(DISCONNECT,(udpHost,udpPort))
+        sock.sendto(DISCONNECT,(udpHost,udpPort))
         self.ui.melabel.clear()
         self.ui.piclabl.clear()
 
