@@ -467,12 +467,25 @@ class P2P_Client(QtGui.QWidget):
         if index < 30000:
             return
 
+        #利用收到的图片数据创建一张img
+        image = cv.CreateMatHeader(1, len(data), cv.CV_8UC1)
+        cv.SetData(image, data, len(data))
+        img = cv.DecodeImageM(image, cv.CV_LOAD_IMAGE_COLOR)
+
         if self.FriendShow == True:
-            pic = QtGui.QImage(data,width,height,QtGui.QImage.Format_RGB888).rgbSwapped()
-            self.ui.piclabl.setPixmap(QtGui.QPixmap.fromImage(pic))
+            new_img = cv.CreateImage((self.ui.piclabl.width(),self.ui.piclabl.height()),8,3)  # 创建一张空图片
+            cv.Resize(img,new_img,0)  # 将img重新设置尺寸
+            img = new_img
+            # 将opencv的图像转换为QImage
+            pic = QtGui.QImage(img.tostring(),img.width,img.height,QtGui.QImage.Format_RGB888).rgbSwapped()
+            self.ui.piclabl.setPixmap(QtGui.QPixmap.fromImage(pic))  # 设置图片显示
         else:
-            pic = QtGui.QImage(data,width,height,QtGui.QImage.Format_RGB888).rgbSwapped()
+            new_img = cv.CreateImage((self.ui.melabel.width(),self.ui.melabel.height()),8,3)
+            cv.Resize(img,new_img,0)
+            img = new_img
+            pic = QtGui.QImage(img.tostring(),img.width,img.height,QtGui.QImage.Format_RGB888).rgbSwapped()
             self.ui.melabel.setPixmap(QtGui.QPixmap.fromImage(pic))
+
 
     def center(self):
         screen = QtGui.QDesktopWidget().screenGeometry()
@@ -608,9 +621,13 @@ class P2P_Client(QtGui.QWidget):
             return
 
     def viewShot(self):
-        '''查看截图(在MS平台不能运行)'''
+        '''查看截图'''
         if self.lastShotName != None:
-            os.popen4('python PicDlg.py '+self.lastShotName[2:])
+            im = cv.LoadImageM(self.lastShotName, True)
+            cv.ShowImage("camera", im)
+            cv.WaitKey()
+            cv.DestroyAllWindows()
+            # os.popen4('python PicDlg.py '+self.lastShotName[2:])
         else:
             reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
                                            _fromUtf8('你还没有截图哦!'),\
