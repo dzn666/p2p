@@ -317,7 +317,9 @@ class P2P_Client(QtGui.QWidget):
                 self.startSendFrameThrd()  #开始视频帧的发送线程
             self.refresh()  #刷新列表
 
-        self.recv_pic = '0' * 36864
+        self.recv_pic = ''
+        self.picflag = [False,False,False]
+        self.pic = ['','','']
 
 
     def startMonitorThrd(self):
@@ -366,18 +368,18 @@ class P2P_Client(QtGui.QWidget):
                     lock.release()
                     data = copy.copy(new_img.tostring())  # length = 36864
                     # data = Compress(data)
-                    pic = PICHEAD + data
-                    sock.sendto(pic,(udpHost,udpPort))
-                    '''
+                    # pic = PICHEAD + data
+                    # sock.sendto(pic,(udpHost,udpPort))
+                    # '''
                     length = len(data)
-                    index = 0
-                    step = 48  #每次发送 64*3 = 192 bit
-                    pices_length = 64 * 3
-                    for index in range(0,length,step):
-                        pices = data[index:index+pices_length]  # 单位发送长度
-                        pic = PICHEAD + ('%05s'%str(index)) + pices
-                        sock.sendto(pic,(udpHost,udpPort))
-                    '''
+                    pices_len = length/3
+                    pic1 = PICHEAD + '0' + data[:pices_len]
+                    pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
+                    pic3 = PICHEAD + '2' + data[pices_len*2:]
+                    sock.sendto(pic1,(udpHost,udpPort))
+                    sock.sendto(pic2,(udpHost,udpPort))
+                    sock.sendto(pic3,(udpHost,udpPort))
+                    # '''
                     time.sleep(1./self.freq)
                     print('send %d bit' % len(data))
                 else:
@@ -461,15 +463,18 @@ class P2P_Client(QtGui.QWidget):
 
     def ShowRecvPic(self):
         '''播放椄收到的帧'''
-        data = str(self.picdata)
-        # width,height = self.getPicSize(data)
-        # if width==0:return
-        # index = int(data[:5])
-        # data = data[5:]
-        # self.recv_pic = self.recv_pic[:index] + data + self.recv_pic[index+len(data):]  #存入图片数据
-        #
-        # if index < 30000:
-        #     return
+        idx = int(self.picdata[0])
+        data = str(self.picdata[1:])
+        self.pic[idx] = data
+        self.picflag[idx] = True
+
+        if self.picflag[0] and self.picflag[1] and self.picflag[2]:
+            self.picflag[0] = self.picflag[1] = self.picflag[2] = False
+            data = self.pic[0] + self.pic[1] + self.pic[2]
+            self.pic = ['','','']
+            pass
+        else:
+            return
 
         #利用收到的图片数据创建一张img
         image = cv.CreateMatHeader(1, len(data), cv.CV_8UC1)
