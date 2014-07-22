@@ -347,8 +347,8 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
-        self.freq = 0.5   #频率调为1s一帧
-        self.quality = 10  #####
+        self.freq = 0.2   #频率调为1s一帧
+        self.quality = 20  #####
         times = 0
         while True:
             try:
@@ -366,6 +366,9 @@ class P2P_Client(QtGui.QWidget):
                     lock.release()
                     data = copy.copy(new_img.tostring())  # length = 36864
                     # data = Compress(data)
+                    pic = PICHEAD + data
+                    sock.sendto(pic,(udpHost,udpPort))
+                    '''
                     length = len(data)
                     index = 0
                     step = 48  #每次发送 64*3 = 192 bit
@@ -374,6 +377,7 @@ class P2P_Client(QtGui.QWidget):
                         pices = data[index:index+pices_length]  # 单位发送长度
                         pic = PICHEAD + ('%05s'%str(index)) + pices
                         sock.sendto(pic,(udpHost,udpPort))
+                    '''
                     time.sleep(1./self.freq)
                     print('send %d bit' % len(data))
                 else:
@@ -460,12 +464,12 @@ class P2P_Client(QtGui.QWidget):
         data = str(self.picdata)
         # width,height = self.getPicSize(data)
         # if width==0:return
-        index = int(data[:5])
-        data = data[5:]
-        self.recv_pic = self.recv_pic[:index] + data + self.recv_pic[index+len(data):]  #存入图片数据
-
-        if index < 30000:
-            return
+        # index = int(data[:5])
+        # data = data[5:]
+        # self.recv_pic = self.recv_pic[:index] + data + self.recv_pic[index+len(data):]  #存入图片数据
+        #
+        # if index < 30000:
+        #     return
 
         #利用收到的图片数据创建一张img
         image = cv.CreateMatHeader(1, len(data), cv.CV_8UC1)
