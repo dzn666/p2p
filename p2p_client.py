@@ -161,6 +161,16 @@ def setTransmitPort():
     udpPort = int(9988)
     lock.release()
 
+trHost = ''
+trPort = 0
+def savedst(host,port):
+    global trHost,trPort
+    lock.acquire()
+    trHost = str(host)
+    trPort = int(port)
+    lock.release()
+
+
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName(_fromUtf8("Form"))
@@ -381,9 +391,13 @@ class P2P_Client(QtGui.QWidget):
                     # '''
                     length = len(data)
                     pices_len = length/3
-                    pic1 = PICHEAD + '0' + data[:pices_len]
-                    pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
-                    pic3 = PICHEAD + '2' + data[pices_len*2:]
+                    # pic1 = PICHEAD + '0' + data[:pices_len]
+                    # pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
+                    # pic3 = PICHEAD + '2' + data[pices_len*2:]
+                    pic1 = str(udpHost) + ':' + str(udpPort) + '#' + PICHEAD + '0' + data[:pices_len]
+                    pic2 = str(udpHost) + ':' + str(udpPort) + '#' +  PICHEAD + '1' + data[pices_len:pices_len*2]
+                    pic3 = str(udpHost) + ':' + str(udpPort) + '#' +  PICHEAD + '2' + data[pices_len*2:]
+
                     sock.sendto(pic1,(udpHost,udpPort))
                     sock.sendto(pic2,(udpHost,udpPort))
                     sock.sendto(pic3,(udpHost,udpPort))
@@ -440,6 +454,7 @@ class P2P_Client(QtGui.QWidget):
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
                 # setUdpHostPort(ip,port)
+                savedst(host,port)
                 setTransmitPort()   # ///////////////////////
                 startTrans()
             else:
@@ -456,6 +471,7 @@ class P2P_Client(QtGui.QWidget):
             dat = OPERATESUCCESS + str(host) + ':' + str(port)
             sock.sendto(dat,(HOST,PORT))
             # setUdpHostPort(host,port)
+            savedst(host,port)
             setTransmitPort()   # ///////////////////////
         except Exception as e:
             print(e)
