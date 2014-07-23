@@ -367,7 +367,7 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
-        self.freq = 0.2   #频率调为1s一帧
+        self.freq = 0.5   #频率调为2s一帧
         self.quality = 20  #####
         times = 0
         while True:
@@ -454,7 +454,7 @@ class P2P_Client(QtGui.QWidget):
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
                 # setUdpHostPort(ip,port)
-                savedst(host,port)
+                savedst(ip,port)
                 setTransmitPort()   # ///////////////////////
                 startTrans()
             else:
@@ -554,8 +554,8 @@ class P2P_Client(QtGui.QWidget):
         if True:
             self.logout(False)
             QCloseEvent.accept()
-            sock.sendto(DISCONNECT,(udpHost,udpPort))
-            sock.sendto(DISCONNECT,(udpHost,udpPort))
+            sock.sendto(DISCONNECT,(udpHost,int(udpPort)))
+            sock.sendto(DISCONNECT,(udpHost,int(udpPort)))
         else:
             QCloseEvent.ignore()
 
