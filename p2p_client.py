@@ -339,6 +339,9 @@ class P2P_Client(QtGui.QWidget):
         self.picflag = [False,False,False]
         self.pic = ['','','']
 
+        sock.sendto('NONE',('115.29.227.229',9988))
+        sock.sendto('NONE',('115.29.227.229',9988))
+
 
     def startMonitorThrd(self):
         t = threading.Thread(target=self.MonitorRecv,args=())
@@ -402,8 +405,8 @@ class P2P_Client(QtGui.QWidget):
                     sock.sendto(pic2,(udpHost,udpPort))
                     sock.sendto(pic3,(udpHost,udpPort))
                     # '''
-                    time.sleep(1./self.freq)
                     print('send %d bit' % len(data))
+                    time.sleep(1./self.freq)
                 else:
                     time.sleep(3)
             except Exception as e:
