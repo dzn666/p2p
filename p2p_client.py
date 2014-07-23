@@ -154,6 +154,13 @@ def setUdpHostPort(host,port):
     udpPort = int(port)
     lock.release()
 
+def setTransmitPort():
+    global udpHost,udpPort
+    lock.acquire()
+    udpHost = '115.29.227.229'
+    udpPort = int(9988)
+    lock.release()
+
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName(_fromUtf8("Form"))
@@ -432,7 +439,8 @@ class P2P_Client(QtGui.QWidget):
             elif op == OPERATESUCCESS:
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
-                setUdpHostPort(ip,port)
+                # setUdpHostPort(ip,port)
+                setTransmitPort()   # ///////////////////////
                 startTrans()
             else:
                 print('==== ', ' ====')
@@ -447,7 +455,8 @@ class P2P_Client(QtGui.QWidget):
             print("向%s:%d发送打洞包数据！"%(host,port))
             dat = OPERATESUCCESS + str(host) + ':' + str(port)
             sock.sendto(dat,(HOST,PORT))
-            setUdpHostPort(host,port)
+            # setUdpHostPort(host,port)
+            setTransmitPort()   # ///////////////////////
         except Exception as e:
             print(e)
             print("UDP hole err")
