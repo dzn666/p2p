@@ -395,9 +395,9 @@ class P2P_Client(QtGui.QWidget):
                     # pic1 = PICHEAD + '0' + data[:pices_len]
                     # pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
                     # pic3 = PICHEAD + '2' + data[pices_len*2:]
-                    pic1 = str(udpHost) + ':' + str(udpPort) + '#' + PICHEAD + '0' + data[:pices_len]
-                    pic2 = str(udpHost) + ':' + str(udpPort) + '#' +  PICHEAD + '1' + data[pices_len:pices_len*2]
-                    pic3 = str(udpHost) + ':' + str(udpPort) + '#' +  PICHEAD + '2' + data[pices_len*2:]
+                    pic1 = TRANSMIT + str(trHost) + ':' + str(trHost) + '#' + '0' + data[:pices_len]
+                    pic2 = TRANSMIT + str(trHost) + ':' + str(trHost) + '#' + '1' + data[pices_len:pices_len*2]
+                    pic3 = TRANSMIT + str(trHost) + ':' + str(trHost) + '#' + '2' + data[pices_len*2:]
 
                     sock.sendto(pic1,(udpHost,udpPort))
                     sock.sendto(pic2,(udpHost,udpPort))
@@ -440,11 +440,17 @@ class P2P_Client(QtGui.QWidget):
         else:
             op = data[0]
             if op==PICHEAD:
-                print("recv: %d bit" %len(data))
-                self.picdata = data[1:]
-                if not transState:
-                    startTrans()
-                self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
+                data = data[1:]
+                for i in range(40):
+                    if data[i] == '#':
+                        addr,dat  = data[:i],data[i+1:]
+                        dsthost,dstport = addr.split(':')
+                        savedst(dstport,dsthost)
+                        print("recv: %d bit" %len(data))
+                        self.picdata = dat
+                        if not transState:
+                            startTrans()
+                        self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
             elif op == GETLIST:
                 self.refresh(data.strip()[1:])
             elif op == CONNECTWHO:
@@ -544,6 +550,11 @@ class P2P_Client(QtGui.QWidget):
         port = int(port)
         stopTrans()
         dat = CONNECTWHO + host + ':' + str(port)
+        print(data)
+        savedst(host,port)
+        setUdpHostPort(HOST,PORT)
+        startTrans()   ####
+
         # sock.sendto(dat,(HOST,PORT))
 
     def closeEvent(self, QCloseEvent):
