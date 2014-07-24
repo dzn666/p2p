@@ -50,6 +50,7 @@ OPERATESUCCESS = '6'
 PICHEAD     = '7'
 HOLE = '8'
 DISCONNECT = '9'
+TRANSMIT = '-'
 
 serveState = True
 transState = False
@@ -307,7 +308,7 @@ class P2P_Client(QtGui.QWidget):
         self.ui.qualityBar.setRange(1,99)
         self.ui.qualityBar.setValue(10)
 
-        self.center()  #窗口居中显
+        # self.center()  #窗口居中显
         login()    #登陆
 
         self.cap = cv.CaptureFromCAM(0)   #获取摄像头
@@ -338,9 +339,6 @@ class P2P_Client(QtGui.QWidget):
         self.recv_pic = ''
         self.picflag = [False,False,False]
         self.pic = ['','','']
-
-        sock.sendto('NONE',('115.29.227.229',9988))
-        sock.sendto('NONE',('115.29.227.229',9988))
 
 
     def startMonitorThrd(self):
@@ -546,7 +544,7 @@ class P2P_Client(QtGui.QWidget):
         port = int(port)
         stopTrans()
         dat = CONNECTWHO + host + ':' + str(port)
-        sock.sendto(dat,(HOST,PORT))
+        # sock.sendto(dat,(HOST,PORT))
 
     def closeEvent(self, QCloseEvent):
         '''重定义点击关闭按钮事件'''
