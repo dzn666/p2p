@@ -20,7 +20,7 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 
-import socket
+import socket,SocketServer
 import time
 import threading
 import sys,os
@@ -37,7 +37,7 @@ sys.setdefaultencoding('utf-8')
 lock = threading.Lock()
 
 HOST, PORT = '115.29.227.229', 9999
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock = None
 
 interval = 15  #heartbeat interval
 HEARTBEAT   = '0'
@@ -60,22 +60,24 @@ waitting = False
 udpHost = ''
 udpPort = None
 
+proc = None
 
-def Compress(content):
-    import StringIO,gzip
-    buf = StringIO.StringIO()
-    zfile = gzip.GzipFile(mode='wb', compresslevel=9, fileobj=buf)
-    zfile.write(content)
-    zfile.close()
-    return buf.getvalue()
 
-def Decompress(content):
-    import StringIO,gzip
-    inbuf = StringIO.StringIO(content)
-    f = gzip.GzipFile(mode='rb', fileobj=inbuf)
-    dat = f.read()
-    f.close()
-    return dat
+# def Compress(content):
+#     import StringIO,gzip
+#     buf = StringIO.StringIO()
+#     zfile = gzip.GzipFile(mode='wb', compresslevel=9, fileobj=buf)
+#     zfile.write(content)
+#     zfile.close()
+#     return buf.getvalue()
+#
+# def Decompress(content):
+#     import StringIO,gzip
+#     inbuf = StringIO.StringIO(content)
+#     f = gzip.GzipFile(mode='rb', fileobj=inbuf)
+#     dat = f.read()
+#     f.close()
+#     return dat
 
 
 class HeartBeat():
@@ -268,7 +270,6 @@ class Ui_Form(object):
         self.reconnectBtn.setText(_translate("Form", "重新连接", None))
 
 
-
 class P2P_Client(QtGui.QWidget):
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
@@ -309,7 +310,7 @@ class P2P_Client(QtGui.QWidget):
         self.ui.qualityBar.setValue(10)
 
         # self.center()  #窗口居中显
-        login()    #登陆
+        # login()    #登陆
 
         self.cap = cv.CaptureFromCAM(0)   #获取摄像头
         if cv.QueryFrame(self.cap) == None:
@@ -324,41 +325,49 @@ class P2P_Client(QtGui.QWidget):
         self.ItemList = []  #可视频信息列表
         self.quality = 10
         self.picdata = ''
+        self.hb = None
 
         self.rftime = time.time()
 
         if self.startShowVideo():   #开始播放视频线程
-            if self.startMonitorThrd():  #开始从服务器接收数据线程
-                login()
-                print("登陆中...")
-            self.hb = HeartBeat()   #心跳包，用于检测是否和服务器保持连接
+            # if self.startMonitorThrd():  #开始从服务器接收数据线程
+            #     login()
+            #     print("登陆中...")
+            # self.hb = HeartBeat()   #心跳包，用于检测是否和服务器保持连接
             if self.capture_is_avaliable:
                 self.startSendFrameThrd()  #开始视频帧的发送线程
-            self.refresh()  #刷新列表
+            # self.refresh()  #刷新列表
 
         self.recv_pic = ''
         self.picflag = [False,False,False]
         self.pic = ['','','']
 
 
-    def startMonitorThrd(self):
-        t = threading.Thread(target=self.MonitorRecv,args=())
-        t.setDaemon(True)
-        t.setName("MonitorRecv")
-        t.start()
-        print("启动后台接收数据线程...")
-        return True
+    def outer_init(self):
+        login()
+        print("登陆中...")
+        self.hb = HeartBeat()
+        self.refresh()
 
-    def MonitorRecv(self):
-        '''后台线程，用于收取数据'''
-        while True:
-            data = sock.recv(1024*1024*8)
-            data = data.strip()
-            if data[0] == PICHEAD:
-                # data = PICHEAD + Decompress(data[1:])
-                pass
-            if data:
-                self.emit(QtCore.SIGNAL(_fromUtf8("ParseCmd(QString)")),_fromUtf8(data))
+
+    # def startMonitorThrd(self):
+    #     t = threading.Thread(target=self.MonitorRecv,args=())
+    #     t.setDaemon(True)
+    #     t.setName("MonitorRecv")
+    #     t.start()
+    #     print("启动后台接收数据线程...")
+    #     return True
+    #
+    # def MonitorRecv(self):
+    #     '''后台线程，用于收取数据'''
+    #     while True:
+    #         data, client_addr = sock.recvfrom(1024*1024*8)
+    #         data = data.strip()
+    #         if data[0] == PICHEAD:
+    #             # data = PICHEAD + Decompress(data[1:])
+    #             pass
+    #         if data:
+    #             self.emit(QtCore.SIGNAL(_fromUtf8("ParseCmd(QString)")),_fromUtf8(data))
 
     def startSendFrameThrd(self):
         t = threading.Thread(target=self.SendFrame,args=())
@@ -395,9 +404,9 @@ class P2P_Client(QtGui.QWidget):
                     # pic1 = PICHEAD + '0' + data[:pices_len]
                     # pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
                     # pic3 = PICHEAD + '2' + data[pices_len*2:]
-                    pic1 = TRANSMIT + str(trHost) + ':' + str(trHost) + '#' + '0' + data[:pices_len]
-                    pic2 = TRANSMIT + str(trHost) + ':' + str(trHost) + '#' + '1' + data[pices_len:pices_len*2]
-                    pic3 = TRANSMIT + str(trHost) + ':' + str(trHost) + '#' + '2' + data[pices_len*2:]
+                    pic1 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '0' + data[:pices_len]
+                    pic2 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '1' + data[pices_len:pices_len*2]
+                    pic3 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '2' + data[pices_len*2:]
 
                     sock.sendto(pic1,(udpHost,udpPort))
                     sock.sendto(pic2,(udpHost,udpPort))
@@ -445,12 +454,14 @@ class P2P_Client(QtGui.QWidget):
                     if data[i] == '#':
                         addr,dat  = data[:i],data[i+1:]
                         dsthost,dstport = addr.split(':')
-                        savedst(dstport,dsthost)
+                        savedst(dsthost,dstport)
+                        setUdpHostPort(HOST,PORT)
                         print("recv: %d bit" %len(data))
                         self.picdata = dat
                         if not transState:
                             startTrans()
                         self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
+                        break
             elif op == GETLIST:
                 self.refresh(data.strip()[1:])
             elif op == CONNECTWHO:
@@ -768,10 +779,39 @@ class P2P_Client(QtGui.QWidget):
             self.ui.frdlist.takeItem(i)
 
 
+class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        global proc
+        data = self.request[0].strip()
+        data = str(data)
+        if data:
+            proc.ParseCmd(data)  #调用ui界面的函数
+
+
+def startThrdUDPServer():
+    global sock,proc
+    SocketServer.ThreadingUDPServer.allow_reuse_address = True
+    server = SocketServer.ThreadingUDPServer((HOST, PORT), ThreadedUDPRequestHandler,False)
+    server.request_queue_size = 20   # max request queue number
+    server.max_packet_size = 8192*20
+    sock = server.socket
+    server.daemon_threads = True
+    proc.outer_init()
+    try:
+        server_thread = threading.Thread(target=server.serve_forever)
+        # Exit the server thread when the main thread terminates
+        server_thread.daemon = True
+        server_thread.start()
+    except KeyboardInterrupt:
+        print(" UDPServer has stopped!  Bye!")
+        exit(0)
+
 def main():
+    global proc
     app = QtGui.QApplication(sys.argv)
-    p = P2P_Client()
-    p.show()
+    proc = P2P_Client()
+    proc.show()
+    startThrdUDPServer()
     sys.exit(app.exec_())
 
 if __name__=='__main__':
