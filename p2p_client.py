@@ -90,22 +90,21 @@ class HeartBeat():
 
 
     def __heatbeat(self):
+        data = HEARTBEAT
         while True:
             try:
                 if loginState == True:
+                    '''here heatbeat 67'''
                     socket.setdefaulttimeout(15)
-                    sock.sendto(HEARTBEAT,(HOST,PORT))
+                    sock.sendto(data,(HOST,PORT))
                 time.sleep(interval)
+            except KeyboardInterrupt:
+                pass
             except socket.timeout:
                 print("服务器不可到达")
                 setServInvalid()
                 time.sleep(5)
 
-'''
-    因为多线程更改全局变量时会发生竞态，
-    统一使用以下函数加锁访问机制，
-    可以避免竞态
-'''
 
 def setServInvalid():
     global serveState
@@ -156,22 +155,6 @@ def setUdpHostPort(host,port):
     lock.acquire()
     udpHost = str(host)
     udpPort = int(port)
-    lock.release()
-
-def setTransmitPort():
-    global udpHost,udpPort
-    lock.acquire()
-    udpHost = '115.29.227.229'
-    udpPort = int(9988)
-    lock.release()
-
-trHost = ''
-trPort = 0
-def savedst(host,port):
-    global trHost,trPort
-    lock.acquire()
-    trHost = str(host)
-    trPort = int(port)
     lock.release()
 
 
@@ -308,29 +291,26 @@ class P2P_Client(QtGui.QWidget):
         self.setMinimumWidth(720)
         self.setMaximumWidth(960)
         self.ui.qualityBar.setRange(1,99)
-        self.ui.qualityBar.setValue(20)
+        self.ui.qualityBar.setValue(10)
 
         self.cap = cv.CaptureFromCAM(0) #获取摄像头
         if cv.QueryFrame(self.cap) == None:
             print("无法识别你的摄像头，程序结束")
             sys.exit(0)
 
-        self.FriendShow = True #窗口主要显示朋友视频状态
-        self.lastShotName = None #最后截图保存的名字
-        self.capture_is_avaliable = True #摄像头是否可用
-        self.freq = 7 #默认视频采集帧数
-        self.pos = 0
-        self.ItemList = [] #可视频信息列表
-        self.quality = 20
+        self.FriendShow = True # 窗口主要显示朋友视频状态
+        self.lastShotName = None # 最后截图保存的名字
+        self.capture_is_avaliable = True # 摄像头是否可用
+        self.freq = 10 # 默认视频采集帧数
+        self.ItemList = [] # 可视频信息列表
+        self.quality = 10
         self.picdata = ''
         self.hb = None
 
         self.rftime = time.time()
 
         if self.startShowVideo(): #开始播放视频线程
-            if self.capture_is_avaliable:
                 self.startSendFrameThrd() #开始视频帧的发送线程
-
         self.image = cv.CreateImage((128,96), 8, 3)
 
     def outer_init(self):
@@ -347,21 +327,42 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
+        self.freq = 7 #频率调为2s一帧
+        self.quality = 20 #####
+        times = 0
         while True:
-            if transState == True and loginState == True:
-                if not udpPort or not udpHost:
-                    continue
-                lock.acquire()     # 改变传输图片的质量,些处为128*96
-                width = int(6.40 * self.quality)
-                height = int(4.80 * self.quality)
-                new_img = cv.CreateImage((width,height),8,3)
-                cv.Resize(self.img,new_img,0)
-                lock.release()
-                pic = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '0' + str(new_img.tostring())
-                sock.sendto(pic,(udpHost,udpPort))
-                time.sleep(1./self.freq)
-            else:
-                time.sleep(2)
+            try:
+                if transState == True and loginState == True:
+                    if not udpPort and not udpHost:
+                        continue
+                    lock.acquire()
+                    width = int(6.40 * self.quality)
+                    height = int(4.80 * self.quality)
+                    new_img = cv.CreateImage((width,height),8,3)
+                    cv.Resize(self.img,new_img,0)
+                    lock.release()
+                    # data = copy.copy(new_img.tostring()) # length = 36864
+                    # data = Compress(data)
+                    # pic = PICHEAD + data
+                    # sock.sendto(pic,(udpHost,udpPort))
+                    # '''
+                    #length = len(data)
+                    #pices_len = length/3
+                    # pic1 = PICHEAD + '0' + data[:pices_len]
+                    # pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
+                    # pic3 = PICHEAD + '2' + data[pices_len*2:]
+                    # sock.sendto(pic1,(udpHost,udpPort))
+                    # sock.sendto(pic2,(udpHost,udpPort))
+                    # sock.sendto(pic3,(udpHost,udpPort))
+                    # '''
+                    # print('send %d bit' % len(data))
+                    pic = PICHEAD + '0' + new_img.tostring()
+                    sock.sendto(pic,(udpHost,udpPort))
+                    time.sleep(1./self.freq)
+                else:
+                    time.sleep(3)
+            except Exception as e:
+                print(e)
 
     def ParseCmd(self,data):
         '''数据包解析'''
@@ -392,9 +393,7 @@ class P2P_Client(QtGui.QWidget):
             elif op == OPERATESUCCESS:
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
-                # setUdpHostPort(ip,port)
-                savedst(ip,port)
-                setTransmitPort() # ///////////////////////
+                setUdpHostPort(ip,port)
                 startTrans()
             else:
                 print('==== ', ' ====')
@@ -421,6 +420,33 @@ class P2P_Client(QtGui.QWidget):
             else:
                 print("unknown exception!:"+data)
                 pass
+
+    def UDPHole(self,host,port):
+        '''UDP打洞发包'''
+        try:
+            sock.sendto(HOLE,(host,port))
+            sock.sendto(HOLE,(host,port))
+            sock.sendto(HOLE,(host,port))
+            sock.sendto(HOLE,(host,port))
+            print("向%s:%d发送打洞包数据！"%(host,port))
+            dat = OPERATESUCCESS + str(host) + ':' + str(port)
+            sock.sendto(dat,(HOST,PORT))
+            setUdpHostPort(host,port)
+        except Exception as e:
+            print(e)
+            print("UDP hole err")
+            pass
+
+    def getPicSize(self,data):
+        '''算出最接近但不大于真实接收到图片的长度'''
+        length = len(data) / 3
+        if length == 0: return (0,0)
+        h = 48
+        while h < 481:
+            if h*h*4/3 - length > 0:
+                return ((h-1)*4/3,h-1)
+            h += 1
+        return (0,0)
 
     def ShowRecvPic(self):
         '''播放椄收到的帧'''
@@ -461,8 +487,7 @@ class P2P_Client(QtGui.QWidget):
         stopTrans()
         dat = CONNECTWHO + host + ':' + str(port)
         print(data)
-        savedst(host,port)
-        setUdpHostPort(HOST,PORT)   # 调用之前设置Udp打洞的函数，但ip和port设置为服务器，以此为中转
+        setUdpHostPort(host,port)
         startTrans()
 
     def closeEvent(self, QCloseEvent):
@@ -483,9 +508,9 @@ class P2P_Client(QtGui.QWidget):
 
     def ShowVideo(self):
         global loginState
-        '''后台Video掌控线程，用于在规定频率内发射一个信号，由相应函数执行显示帧和刷新好友列表'''
+        '''后台Video掌控线程，用于在规定频率内发射一个信号，由相应函数执行显示图片帧和刷新好友列表'''
         while True:
-            if time.time()-self.rftime > 3:  # 每3s秒更新一下列表
+            if time.time()-self.rftime > 10:
                 self.rftime = time.time()
                 if loginState == True:
                     self.emit(QtCore.SIGNAL(_fromUtf8("refresh(QString)")),_fromUtf8("refresh"))
@@ -529,8 +554,9 @@ class P2P_Client(QtGui.QWidget):
         transState = False
         lock.release()
         print("已断开视频连接")
-        sock.sendto(DISCONNECT,(udpHost,udpPort))
-        sock.sendto(DISCONNECT,(udpHost,udpPort))
+        if udpPort:
+            sock.sendto(DISCONNECT,(udpHost,udpPort))
+            sock.sendto(DISCONNECT,(udpHost,udpPort))
         self.ui.melabel.clear()
         self.ui.piclabl.clear()
 
