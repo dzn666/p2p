@@ -341,21 +341,7 @@ class P2P_Client(QtGui.QWidget):
                     new_img = cv.CreateImage((width,height),8,3)
                     cv.Resize(self.img,new_img,0)
                     lock.release()
-                    # data = copy.copy(new_img.tostring()) # length = 36864
-                    # data = Compress(data)
-                    # pic = PICHEAD + data
-                    # sock.sendto(pic,(udpHost,udpPort))
-                    # '''
-                    #length = len(data)
-                    #pices_len = length/3
-                    # pic1 = PICHEAD + '0' + data[:pices_len]
-                    # pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
-                    # pic3 = PICHEAD + '2' + data[pices_len*2:]
-                    # sock.sendto(pic1,(udpHost,udpPort))
-                    # sock.sendto(pic2,(udpHost,udpPort))
-                    # sock.sendto(pic3,(udpHost,udpPort))
-                    # '''
-                    # print('send %d bit' % len(data))
+                    # print('send %d bit' % len(new_img.tostring()))
                     pic = PICHEAD + '0' + new_img.tostring()
                     sock.sendto(pic,(udpHost,udpPort))
                     time.sleep(1./self.freq)
@@ -371,19 +357,11 @@ class P2P_Client(QtGui.QWidget):
         if len(data) > 1:
             op = data[0]
             if op==PICHEAD:
-                data = data[1:]
-                for i in range(40):
-                    if data[i] == '#':
-                        addr,dat = data[:i],data[i+1:]
-                        dsthost,dstport = addr.split(':')
-                        savedst(dsthost,dstport)
-                        setUdpHostPort(HOST,PORT)
-                        # print("recv: %d bit" %len(dat))
-                        self.picdata = dat
-                        if not transState:
-                            startTrans()
-                        self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
-                        break
+                self.picdata = data[1:]
+                print("recv: %d bit" %len(data))
+                if not transState:
+                    startTrans()
+                self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
             elif op == GETLIST:
                 self.refresh(data.strip()[1:])
             elif op == CONNECTWHO:
@@ -486,16 +464,17 @@ class P2P_Client(QtGui.QWidget):
         port = int(port)
         stopTrans()
         dat = CONNECTWHO + host + ':' + str(port)
+        sock.sendto(dat,(HOST,PORT))
         print(data)
         setUdpHostPort(host,port)
-        startTrans()
 
     def closeEvent(self, QCloseEvent):
         '''重定义点击关闭按钮事件'''
         self.logout(False)
         QCloseEvent.accept()
-        sock.sendto(DISCONNECT,(udpHost,int(udpPort)))
-        sock.sendto(DISCONNECT,(udpHost,int(udpPort)))
+        if udpPort:
+            sock.sendto(DISCONNECT,(udpHost,int(udpPort)))
+            sock.sendto(DISCONNECT,(udpHost,int(udpPort)))
 
     def startShowVideo(self):
         '''开始后台控制图片采集时间线程'''
