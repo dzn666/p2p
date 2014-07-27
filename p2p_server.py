@@ -20,6 +20,8 @@ LOGIN       = '3'
 LOGOUT      = '4'
 FAILED      = '5'
 OPERATESUCCESS = '6'
+PICHEAD = '7'
+TRANSMIT = '-'
 
 LIST = [] # items' format: ((ip,port),socket,last_time))
 lock = threading.Lock()
@@ -29,9 +31,25 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
         data = self.request[0].strip()
         sock = self.request[1]
         ip, port = self.client_address
-        print ip,':',port,'->  ',data,'  <-'
+	if len(data)<40:
+            print ip,':',port,'->  ',data,'  <-'
 
-        if data[0] == HEARTBEAT:
+        if data[0] == TRANSMIT:
+            data = data[1:]
+            if len(data)<40:
+                return
+            for i in range(40):
+                if data[i] == '#':
+                    addr,dat  = data[:i],data[i+1:]
+		    print('recv transmit packet from %s:%s -> length: %d'%(ip,str(port),len(dat)))
+                    dsthost,dstport = addr.split(':')
+		    dsthost = str(dsthost)
+		    dstport = int(dstport)
+		    dat = PICHEAD + str(ip) + ':' + str(port) + '#' + dat
+		    sock.sendto(dat,(dsthost,dstport))
+		    # Transmit(dat,dsthost,int(dstport))
+                    break
+        elif data[0] == HEARTBEAT:
             HeartBeat(((ip,port),sock))
         elif data[0] == GETLIST:
             lst = GetList(ip,port)
@@ -128,6 +146,11 @@ def ConnectTo((ip,port),(dst_ip,dst_port)):
         else:
             return False
 
+def Transmit(data,dst_ip,dst_port):
+    for (_ip,_port),_socket,_last_time in LIST:
+        if dst_ip==_ip and dst_port==int(_port):
+            _socket.sendto(data, (dst_ip,int(dst_port)))
+
 def HeartBeat(((ip,port),socket)):
     UpdateTime((ip,port),socket)
     SendHeartBeat(((ip,port),socket))
@@ -165,6 +188,7 @@ def StartUDPServerThrd():
     ThreadedUDPServer.allow_reuse_address = True
     server = ThreadedUDPServer((HOST, PORT), ThreadedUDPRequestHandler)
     server.request_queue_size = 20   # max request queue number
+    server.max_packet_size = 8192 * 20
     try:
         server_thread = threading.Thread(target=server.serve_forever)
         # Exit the server thread when the main thread terminates
