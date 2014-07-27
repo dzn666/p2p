@@ -342,6 +342,7 @@ class P2P_Client(QtGui.QWidget):
         self.picflag = [False,False,False]
         self.pic = ['','','']
 
+        self.image = cv.CreateImage((128,96), 8, 3)
 
     def outer_init(self):
         login()
@@ -512,7 +513,6 @@ class P2P_Client(QtGui.QWidget):
         '''播放椄收到的帧'''
         idx = int(self.picdata[0])
         data = str(self.picdata[1:])
-        print()
         self.pic[idx] = data
         self.picflag[idx] = True
 
@@ -526,26 +526,24 @@ class P2P_Client(QtGui.QWidget):
             print("图片数据不完整")
             return
         print("收到一张完整图片！！")
-        print(data[:50])
         #利用收到的图片数据创建一张img
-        image = cv.CreateMatHeader(1, len(data), cv.CV_8UC1)
-        cv.SetData(image, data, len(data))
-        try:
-            img = cv.DecodeImageM(image, cv.CV_LOAD_IMAGE_COLOR)
-        except:
-            print("图像解码错误！")
-            return
+        width,height,channel = 96,128,3
+        for i in range(0,width):
+	        for j in range(0,height):
+		        self.image[i,j][0] = ord(data[channel*(height*i+j)+0])
+                self.image[i,j][1] = ord(data[channel*(height*i+j)+1])
+                self.image[i,j][2] = ord(data[channel*(height*i+j)+2])
 
         if self.FriendShow == True:
             new_img = cv.CreateImage((self.ui.piclabl.width(),self.ui.piclabl.height()),8,3) # 创建一张空图片
-            cv.Resize(img,new_img,0) # 将img重新设置尺寸
+            cv.Resize(self.image,new_img,0) # 将img重新设置尺寸
             img = new_img
             # 将opencv的图像转换为QImage
             pic = QtGui.QImage(img.tostring(),img.width,img.height,QtGui.QImage.Format_RGB888).rgbSwapped()
             self.ui.piclabl.setPixmap(QtGui.QPixmap.fromImage(pic)) # 设置图片显示
         else:
             new_img = cv.CreateImage((self.ui.melabel.width(),self.ui.melabel.height()),8,3)
-            cv.Resize(img,new_img,0)
+            cv.Resize(self.image,new_img,0)
             img = new_img
             pic = QtGui.QImage(img.tostring(),img.width,img.height,QtGui.QImage.Format_RGB888).rgbSwapped()
             self.ui.melabel.setPixmap(QtGui.QPixmap.fromImage(pic))
