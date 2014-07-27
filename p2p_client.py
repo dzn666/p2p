@@ -378,7 +378,7 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
-        self.freq = 0.5 #频率调为2s一帧
+        self.freq = 5 #频率调为2s一帧
         self.quality = 20 #####
         times = 0
         while True:
@@ -405,15 +405,16 @@ class P2P_Client(QtGui.QWidget):
                     # pic1 = PICHEAD + '0' + data[:pices_len]
                     # pic2 = PICHEAD + '1' + data[pices_len:pices_len*2]
                     # pic3 = PICHEAD + '2' + data[pices_len*2:]
-                    pic1 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '0' + data[:pices_len]
-                    pic2 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '1' + data[pices_len:pices_len*2]
-                    pic3 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '2' + data[pices_len*2:]
-
-                    sock.sendto(pic1,(udpHost,udpPort))
-                    sock.sendto(pic2,(udpHost,udpPort))
-                    sock.sendto(pic3,(udpHost,udpPort))
+                    # pic1 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '0' + data[:pices_len]
+                    # pic2 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '1' + data[pices_len:pices_len*2]
+                    # pic3 = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '2' + data[pices_len*2:]
+                    # sock.sendto(pic1,(udpHost,udpPort))
+                    # sock.sendto(pic2,(udpHost,udpPort))
+                    # sock.sendto(pic3,(udpHost,udpPort))
                     # '''
-                    print('send %d bit' % len(data))
+                    # print('send %d bit' % len(data))
+                    pic = TRANSMIT + str(trHost) + ':' + str(trPort) + '#' + '0' + data
+                    sock.sendto(pic,(udpHost,udpPort))
                     time.sleep(1./self.freq)
                 else:
                     time.sleep(3)
@@ -454,11 +455,10 @@ class P2P_Client(QtGui.QWidget):
                 for i in range(40):
                     if data[i] == '#':
                         addr,dat = data[:i],data[i+1:]
-                        print(data[:i+5])
                         dsthost,dstport = addr.split(':')
                         savedst(dsthost,dstport)
                         setUdpHostPort(HOST,PORT)
-                        print("recv: %d bit" %len(dat))
+                        # print("recv: %d bit" %len(dat))
                         self.picdata = dat
                         if not transState:
                             startTrans()
@@ -513,26 +513,15 @@ class P2P_Client(QtGui.QWidget):
         '''播放椄收到的帧'''
         idx = int(self.picdata[0])
         data = str(self.picdata[1:])
-        self.pic[idx] = data
-        self.picflag[idx] = True
 
-        if self.picflag[0] and self.picflag[1] and self.picflag[2]:
-            self.picflag[0] = self.picflag[1] = self.picflag[2] = False
-            data = self.pic[0] + self.pic[1] + self.pic[2]
-            self.pic = ['','','']
-        else:
-            return
-        if len(data) != 36864:
-            print("图片数据不完整")
-            return
-        print("收到一张完整图片！！")
-        #利用收到的图片数据创建一张img
         width,height,channel = 96,128,3
+
+        while len(data)<width*height*channel:
+            data += chr(0)
+
         for i in range(0,width):
 	        for j in range(0,height):
-		        self.image[i,j][0] = ord(data[channel*(height*i+j)+0])
-                self.image[i,j][1] = ord(data[channel*(height*i+j)+1])
-                self.image[i,j][2] = ord(data[channel*(height*i+j)+2])
+		        self.image[i,j] = ord(data[channel*(height*i+j)+0]),ord(data[channel*(height*i+j)+1]),ord(data[channel*(height*i+j)+2])
 
         if self.FriendShow == True:
             new_img = cv.CreateImage((self.ui.piclabl.width(),self.ui.piclabl.height()),8,3) # 创建一张空图片
