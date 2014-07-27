@@ -39,15 +39,15 @@ lock = threading.Lock()
 HOST, PORT = '115.29.227.229', 9999
 sock = None
 
-interval = 15  #heartbeat interval
-HEARTBEAT   = '0'
-GETLIST     = '1'
-CONNECTWHO  = '2'
-LOGIN       = '3'
-LOGOUT      = '4'
-FAILED      = '5'
+interval = 15 #heartbeat interval
+HEARTBEAT = '0'
+GETLIST = '1'
+CONNECTWHO = '2'
+LOGIN = '3'
+LOGOUT = '4'
+FAILED = '5'
 OPERATESUCCESS = '6'
-PICHEAD     = '7'
+PICHEAD = '7'
 HOLE = '8'
 DISCONNECT = '9'
 TRANSMIT = '-'
@@ -64,20 +64,20 @@ proc = None
 
 
 # def Compress(content):
-#     import StringIO,gzip
-#     buf = StringIO.StringIO()
-#     zfile = gzip.GzipFile(mode='wb', compresslevel=9, fileobj=buf)
-#     zfile.write(content)
-#     zfile.close()
-#     return buf.getvalue()
+# import StringIO,gzip
+# buf = StringIO.StringIO()
+# zfile = gzip.GzipFile(mode='wb', compresslevel=9, fileobj=buf)
+# zfile.write(content)
+# zfile.close()
+# return buf.getvalue()
 #
 # def Decompress(content):
-#     import StringIO,gzip
-#     inbuf = StringIO.StringIO(content)
-#     f = gzip.GzipFile(mode='rb', fileobj=inbuf)
-#     dat = f.read()
-#     f.close()
-#     return dat
+# import StringIO,gzip
+# inbuf = StringIO.StringIO(content)
+# f = gzip.GzipFile(mode='rb', fileobj=inbuf)
+# dat = f.read()
+# f.close()
+# return dat
 
 
 class HeartBeat():
@@ -309,34 +309,34 @@ class P2P_Client(QtGui.QWidget):
         self.ui.qualityBar.setRange(1,99)
         self.ui.qualityBar.setValue(10)
 
-        # self.center()  #窗口居中显
-        # login()    #登陆
+        # self.center() #窗口居中显
+        # login() #登陆
 
-        self.cap = cv.CaptureFromCAM(0)   #获取摄像头
+        self.cap = cv.CaptureFromCAM(0) #获取摄像头
         if cv.QueryFrame(self.cap) == None:
             print("无法识别你的摄像头，程序结束")
             sys.exit(0)
 
-        self.FriendShow = True    #窗口主要显示朋友视频状态
-        self.lastShotName = None    #最后截图保存的名字
-        self.capture_is_avaliable = True  #摄像头是否可用
-        self.freq = 10    #默认视频采集帧数
+        self.FriendShow = True #窗口主要显示朋友视频状态
+        self.lastShotName = None #最后截图保存的名字
+        self.capture_is_avaliable = True #摄像头是否可用
+        self.freq = 10 #默认视频采集帧数
         self.pos = 0
-        self.ItemList = []  #可视频信息列表
+        self.ItemList = [] #可视频信息列表
         self.quality = 10
         self.picdata = ''
         self.hb = None
 
         self.rftime = time.time()
 
-        if self.startShowVideo():   #开始播放视频线程
-            # if self.startMonitorThrd():  #开始从服务器接收数据线程
-            #     login()
-            #     print("登陆中...")
-            # self.hb = HeartBeat()   #心跳包，用于检测是否和服务器保持连接
+        if self.startShowVideo(): #开始播放视频线程
+            # if self.startMonitorThrd(): #开始从服务器接收数据线程
+            # login()
+            # print("登陆中...")
+            # self.hb = HeartBeat() #心跳包，用于检测是否和服务器保持连接
             if self.capture_is_avaliable:
-                self.startSendFrameThrd()  #开始视频帧的发送线程
-            # self.refresh()  #刷新列表
+                self.startSendFrameThrd() #开始视频帧的发送线程
+            # self.refresh() #刷新列表
 
         self.recv_pic = ''
         self.picflag = [False,False,False]
@@ -351,23 +351,23 @@ class P2P_Client(QtGui.QWidget):
 
 
     # def startMonitorThrd(self):
-    #     t = threading.Thread(target=self.MonitorRecv,args=())
-    #     t.setDaemon(True)
-    #     t.setName("MonitorRecv")
-    #     t.start()
-    #     print("启动后台接收数据线程...")
-    #     return True
+    # t = threading.Thread(target=self.MonitorRecv,args=())
+    # t.setDaemon(True)
+    # t.setName("MonitorRecv")
+    # t.start()
+    # print("启动后台接收数据线程...")
+    # return True
     #
     # def MonitorRecv(self):
-    #     '''后台线程，用于收取数据'''
-    #     while True:
-    #         data, client_addr = sock.recvfrom(1024*1024*8)
-    #         data = data.strip()
-    #         if data[0] == PICHEAD:
-    #             # data = PICHEAD + Decompress(data[1:])
-    #             pass
-    #         if data:
-    #             self.emit(QtCore.SIGNAL(_fromUtf8("ParseCmd(QString)")),_fromUtf8(data))
+    # '''后台线程，用于收取数据'''
+    # while True:
+    # data, client_addr = sock.recvfrom(1024*1024*8)
+    # data = data.strip()
+    # if data[0] == PICHEAD:
+    # # data = PICHEAD + Decompress(data[1:])
+    # pass
+    # if data:
+    # self.emit(QtCore.SIGNAL(_fromUtf8("ParseCmd(QString)")),_fromUtf8(data))
 
     def startSendFrameThrd(self):
         t = threading.Thread(target=self.SendFrame,args=())
@@ -377,8 +377,8 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
-        self.freq = 0.5   #频率调为2s一帧
-        self.quality = 20  #####
+        self.freq = 0.5 #频率调为2s一帧
+        self.quality = 20 #####
         times = 0
         while True:
             try:
@@ -394,7 +394,7 @@ class P2P_Client(QtGui.QWidget):
                     new_img = cv.CreateImage((width,height),8,3)
                     cv.Resize(self.img,new_img,0)
                     lock.release()
-                    data = copy.copy(new_img.tostring())  # length = 36864
+                    data = copy.copy(new_img.tostring()) # length = 36864
                     # data = Compress(data)
                     # pic = PICHEAD + data
                     # sock.sendto(pic,(udpHost,udpPort))
@@ -452,11 +452,12 @@ class P2P_Client(QtGui.QWidget):
                 data = data[1:]
                 for i in range(40):
                     if data[i] == '#':
-                        addr,dat  = data[:i],data[i+1:]
+                        addr,dat = data[:i],data[i+1:]
+                        print(data[:i+5])
                         dsthost,dstport = addr.split(':')
                         savedst(dsthost,dstport)
                         setUdpHostPort(HOST,PORT)
-                        print("recv: %d bit" %len(data))
+                        print("recv: %d bit" %len(dat))
                         self.picdata = dat
                         if not transState:
                             startTrans()
@@ -466,14 +467,14 @@ class P2P_Client(QtGui.QWidget):
                 self.refresh(data.strip()[1:])
             elif op == CONNECTWHO:
                 ip, port = data[1:].split(":")
-                print("%s:%s 请求打洞  "%(ip,port))
+                print("%s:%s 请求打洞 "%(ip,port))
                 self.UDPHole(ip,int(port))
             elif op == OPERATESUCCESS:
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
                 # setUdpHostPort(ip,port)
                 savedst(ip,port)
-                setTransmitPort()   # ///////////////////////
+                setTransmitPort() # ///////////////////////
                 startTrans()
             else:
                 print('==== ', ' ====')
@@ -490,7 +491,7 @@ class P2P_Client(QtGui.QWidget):
             sock.sendto(dat,(HOST,PORT))
             # setUdpHostPort(host,port)
             savedst(host,port)
-            setTransmitPort()   # ///////////////////////
+            setTransmitPort() # ///////////////////////
         except Exception as e:
             print(e)
             print("UDP hole err")
@@ -511,6 +512,7 @@ class P2P_Client(QtGui.QWidget):
         '''播放椄收到的帧'''
         idx = int(self.picdata[0])
         data = str(self.picdata[1:])
+        print()
         self.pic[idx] = data
         self.picflag[idx] = True
 
@@ -518,23 +520,29 @@ class P2P_Client(QtGui.QWidget):
             self.picflag[0] = self.picflag[1] = self.picflag[2] = False
             data = self.pic[0] + self.pic[1] + self.pic[2]
             self.pic = ['','','']
-            pass
         else:
             return
         if len(data) != 36864:
+            print("图片数据不完整")
             return
+        print("收到一张完整图片！！")
+        print(data[:50])
         #利用收到的图片数据创建一张img
         image = cv.CreateMatHeader(1, len(data), cv.CV_8UC1)
         cv.SetData(image, data, len(data))
-        img = cv.DecodeImageM(image, cv.CV_LOAD_IMAGE_COLOR)
+        try:
+            img = cv.DecodeImageM(image, cv.CV_LOAD_IMAGE_COLOR)
+        except:
+            print("图像解码错误！")
+            return
 
         if self.FriendShow == True:
-            new_img = cv.CreateImage((self.ui.piclabl.width(),self.ui.piclabl.height()),8,3)  # 创建一张空图片
-            cv.Resize(img,new_img,0)  # 将img重新设置尺寸
+            new_img = cv.CreateImage((self.ui.piclabl.width(),self.ui.piclabl.height()),8,3) # 创建一张空图片
+            cv.Resize(img,new_img,0) # 将img重新设置尺寸
             img = new_img
             # 将opencv的图像转换为QImage
             pic = QtGui.QImage(img.tostring(),img.width,img.height,QtGui.QImage.Format_RGB888).rgbSwapped()
-            self.ui.piclabl.setPixmap(QtGui.QPixmap.fromImage(pic))  # 设置图片显示
+            self.ui.piclabl.setPixmap(QtGui.QPixmap.fromImage(pic)) # 设置图片显示
         else:
             new_img = cv.CreateImage((self.ui.melabel.width(),self.ui.melabel.height()),8,3)
             cv.Resize(img,new_img,0)
@@ -564,15 +572,15 @@ class P2P_Client(QtGui.QWidget):
         print(data)
         savedst(host,port)
         setUdpHostPort(HOST,PORT)
-        startTrans()   ####
+        startTrans() ####
 
         # sock.sendto(dat,(HOST,PORT))
 
     def closeEvent(self, QCloseEvent):
         '''重定义点击关闭按钮事件'''
         # reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-        #                                    _fromUtf8('你真的要退出?'),\
-        #                                    QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
+        # _fromUtf8('你真的要退出?'),\
+        # QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
         # if reply == QtGui.QMessageBox.Yes:
         if True:
             self.logout(False)
@@ -703,7 +711,7 @@ class P2P_Client(QtGui.QWidget):
     def ChangeQuality(self,value):
         '''改变传输给朋友的视频质量'''
         if value < 10:
-            self.ui.qualityBar.setValue(10)  # 设置最小值为10
+            self.ui.qualityBar.setValue(10) # 设置最小值为10
             return
         if value % 10 > 5:
             value = value / 10 + 10
@@ -762,7 +770,7 @@ class P2P_Client(QtGui.QWidget):
     def friendList(self):
         '''显示和关闭朋友列表'''
         if self.width() > 720:
-            self.resize(720,540)  #720:视频尺寸 960:为视频+列表尺寸
+            self.resize(720,540) #720:视频尺寸 960:为视频+列表尺寸
         else:
             self.resize(960,540)
 
@@ -785,14 +793,14 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
         data = self.request[0].strip()
         data = str(data)
         if data:
-            proc.ParseCmd(data)  #调用ui界面的函数
+            proc.ParseCmd(data) #调用ui界面的函数
 
 
 def startThrdUDPServer():
     global sock,proc
     SocketServer.ThreadingUDPServer.allow_reuse_address = True
     server = SocketServer.ThreadingUDPServer((HOST, PORT), ThreadedUDPRequestHandler,False)
-    server.request_queue_size = 20   # max request queue number
+    server.request_queue_size = 20 # max request queue number
     server.max_packet_size = 8192*20
     sock = server.socket
     server.daemon_threads = True
@@ -803,7 +811,7 @@ def startThrdUDPServer():
         server_thread.daemon = True
         server_thread.start()
     except KeyboardInterrupt:
-        print(" UDPServer has stopped!  Bye!")
+        print(" UDPServer has stopped! Bye!")
         exit(0)
 
 def main():
