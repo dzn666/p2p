@@ -4,13 +4,11 @@
 from PyQt4 import QtCore,QtGui,Qt
 from PyQt4 import uic
 
-
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
 except AttributeError:
     def _fromUtf8(s):
         return s
-
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
     def _translate(context, text, disambig):
@@ -28,8 +26,6 @@ import copy
 
 import cv2.cv as cv
 import cv2
-
-from PIL import Image
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -50,7 +46,6 @@ OPERATESUCCESS = '6'
 PICHEAD = '7'
 HOLE = '8'
 DISCONNECT = '9'
-TRANSMIT = '-'
 
 serveState = True
 transState = False
@@ -63,28 +58,10 @@ udpPort = None
 proc = None
 
 
-# def Compress(content):
-# import StringIO,gzip
-# buf = StringIO.StringIO()
-# zfile = gzip.GzipFile(mode='wb', compresslevel=9, fileobj=buf)
-# zfile.write(content)
-# zfile.close()
-# return buf.getvalue()
-#
-# def Decompress(content):
-# import StringIO,gzip
-# inbuf = StringIO.StringIO(content)
-# f = gzip.GzipFile(mode='rb', fileobj=inbuf)
-# dat = f.read()
-# f.close()
-# return dat
-
-
 class HeartBeat():
     def __init__(self):
         self.th = threading.Thread(target=self.__heatbeat, args=())
         self.th.setDaemon(True)
-        self.th.setName('heatbeat')
         self.th.start()
         print("启动心跳检测线程...")
 
@@ -94,12 +71,9 @@ class HeartBeat():
         while True:
             try:
                 if loginState == True:
-                    '''here heatbeat 67'''
                     socket.setdefaulttimeout(15)
                     sock.sendto(data,(HOST,PORT))
                 time.sleep(interval)
-            except KeyboardInterrupt:
-                pass
             except socket.timeout:
                 print("服务器不可到达")
                 setServInvalid()
@@ -301,12 +275,11 @@ class P2P_Client(QtGui.QWidget):
         self.FriendShow = True # 窗口主要显示朋友视频状态
         self.lastShotName = None # 最后截图保存的名字
         self.capture_is_avaliable = True # 摄像头是否可用
-        self.freq = 10 # 默认视频采集帧数
+        self.freq = 7 # 默认视频采集帧数
         self.ItemList = [] # 可视频信息列表
-        self.quality = 10
+        self.quality = 20
         self.picdata = ''
         self.hb = None
-
         self.rftime = time.time()
 
         if self.startShowVideo(): #开始播放视频线程
@@ -322,33 +295,26 @@ class P2P_Client(QtGui.QWidget):
     def startSendFrameThrd(self):
         t = threading.Thread(target=self.SendFrame,args=())
         t.setDaemon(True)
-        t.setName("SendFrame")
         t.start()
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
-        self.freq = 7 #频率调为2s一帧
-        self.quality = 20 #####
-        times = 0
         while True:
-            try:
-                if transState == True and loginState == True:
-                    if not udpPort and not udpHost:
-                        continue
-                    lock.acquire()
-                    width = int(6.40 * self.quality)
-                    height = int(4.80 * self.quality)
-                    new_img = cv.CreateImage((width,height),8,3)
-                    cv.Resize(self.img,new_img,0)
-                    lock.release()
-                    # print('send %d bit' % len(new_img.tostring()))
-                    pic = PICHEAD + '0' + new_img.tostring()
-                    sock.sendto(pic,(udpHost,udpPort))
-                    time.sleep(1./self.freq)
-                else:
-                    time.sleep(3)
-            except Exception as e:
-                print(e)
+            if transState == True and loginState == True:
+                if not udpPort and not udpHost:
+                    continue
+                lock.acquire()
+                width = int(6.40 * self.quality)
+                height = int(4.80 * self.quality)
+                new_img = cv.CreateImage((width,height),8,3)
+                cv.Resize(self.img,new_img,0)
+                lock.release()
+                # print('send %d bit' % len(new_img.tostring()))
+                pic = PICHEAD + new_img.tostring()
+                sock.sendto(pic,(udpHost,udpPort))
+                time.sleep(1./self.freq)
+            else:
+                time.sleep(3)
 
     def ParseCmd(self,data):
         '''数据包解析'''
@@ -404,8 +370,6 @@ class P2P_Client(QtGui.QWidget):
         try:
             sock.sendto(HOLE,(host,port))
             sock.sendto(HOLE,(host,port))
-            sock.sendto(HOLE,(host,port))
-            sock.sendto(HOLE,(host,port))
             print("向%s:%d发送打洞包数据！"%(host,port))
             dat = OPERATESUCCESS + str(host) + ':' + str(port)
             sock.sendto(dat,(HOST,PORT))
@@ -415,21 +379,9 @@ class P2P_Client(QtGui.QWidget):
             print("UDP hole err")
             pass
 
-    def getPicSize(self,data):
-        '''算出最接近但不大于真实接收到图片的长度'''
-        length = len(data) / 3
-        if length == 0: return (0,0)
-        h = 48
-        while h < 481:
-            if h*h*4/3 - length > 0:
-                return ((h-1)*4/3,h-1)
-            h += 1
-        return (0,0)
-
     def ShowRecvPic(self):
         '''播放椄收到的帧'''
-        idx = int(self.picdata[0])
-        data = str(self.picdata[1:])
+        data = self.picdata
         width,height,channel = 96,128,3
 
         while len(data)<width*height*channel:
@@ -479,7 +431,6 @@ class P2P_Client(QtGui.QWidget):
     def startShowVideo(self):
         '''开始后台控制图片采集时间线程'''
         th = threading.Thread(target=self.ShowVideo,args=())
-        th.setName('ShowVideo')
         th.setDaemon(True)
         th.start()
         print("启动后台采集图像线程...")
@@ -550,27 +501,16 @@ class P2P_Client(QtGui.QWidget):
     def shot(self):
         '''截图'''
         name = './VideoShot-'+localTime()+'.jpg'
-        if self.FriendShow == False:
+        if self.FriendShow == False or transState == False:
         #自我拍照模式
             frame = cv.QueryFrame(self.cap)
             cv.SaveImage(name,frame)
             self.lastShotName = name
-        else:
-        # 给视频的人拍照模式
-            if transState == False:
-                reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-                                           _fromUtf8('截图区域没有图像哦!请点击“切换”再截图!'),\
-                                           QtGui.QMessageBox.Ok)
-                return
-            else:
-                pass
-        reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-                                           _fromUtf8('截图成功,是否立即查看?'),\
-                                           QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
-        if reply == QtGui.QMessageBox.Yes:
             self.viewShot()
         else:
-            return
+        # 给视频的人拍照模式
+            cv.SaveImage(name,self.image)
+            self.viewShot()
 
     def viewShot(self):
         '''查看截图'''
@@ -583,7 +523,6 @@ class P2P_Client(QtGui.QWidget):
             reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
                                            _fromUtf8('你还没有截图哦!'),\
                                            QtGui.QMessageBox.Ok)
-            return
 
     def ChangeQuality(self,value):
         '''改变传输给朋友的视频质量'''
@@ -610,33 +549,13 @@ class P2P_Client(QtGui.QWidget):
         '''断开和服务器的连接'''
         global loginState
         if loginState == True:
-            if isreply:
-                reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-                                               _fromUtf8('你真的要注销吗?'),\
-                                               QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
-                if reply == QtGui.QMessageBox.Yes:
-                    pass
-                else:
-                    return
             sock.sendto(LOGOUT,(HOST,PORT))
             stopTrans()
             setLogin(False)
-        else:
-            if not isreply:
-                QtGui.QMessageBox.question(self,_fromUtf8("提示"),\
-                                       _fromUtf8("你还没有登陆"),\
-                                       QtGui.QMessageBox.Ok)
 
     def reconnect(self):
         '''重新连接服务器'''
         if loginState == True:
-            reply = QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-                                               _fromUtf8('你已登陆,真的要重新连接吗?'),\
-                                               QtGui.QMessageBox.Yes,QtGui.QMessageBox.No)
-            if reply == QtGui.QMessageBox.Yes:
-                pass
-            else:
-                return
             self.logout()
             login()
             self.clearList()
