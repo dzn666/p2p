@@ -299,19 +299,19 @@ class P2P_Client(QtGui.QWidget):
         print("启动后台视频发送线程...")
 
     def SendFrame(self):
+        width = int(6.40 * self.quality)
+        height = int(4.80 * self.quality)
         while True:
             if transState == True and loginState == True:
                 if not udpPort and not udpHost:
                     continue
-                lock.acquire()
-                width = int(6.40 * self.quality)
-                height = int(4.80 * self.quality)
                 new_img = cv.CreateImage((width,height),8,3)
+                lock.acquire()
                 cv.Resize(self.img,new_img,0)
                 lock.release()
-                # print('send %d bit' % len(new_img.tostring()))
                 pic = PICHEAD + new_img.tostring()
                 sock.sendto(pic,(udpHost,udpPort))
+                print('send %d bit' % len(pic))
                 time.sleep(1./self.freq)
             else:
                 time.sleep(3)
@@ -405,12 +405,6 @@ class P2P_Client(QtGui.QWidget):
             self.ui.melabel.setPixmap(QtGui.QPixmap.fromImage(pic))
 
     def ListWigetDoubleClickedFun(self,item):
-        global loginState,transState
-        if loginState == False:
-            QtGui.QMessageBox.question(self,_fromUtf8('提示'),\
-                                           _fromUtf8('你还没有登陆!'),\
-                                           QtGui.QMessageBox.Ok)
-            return
         data = str(item.text())
         host,port = data.split(':')
         port = int(port)
@@ -440,7 +434,7 @@ class P2P_Client(QtGui.QWidget):
         global loginState
         '''后台Video掌控线程，用于在规定频率内发射一个信号，由相应函数执行显示图片帧和刷新好友列表'''
         while True:
-            if time.time()-self.rftime > 10:
+            if time.time()-self.rftime > 3:
                 self.rftime = time.time()
                 if loginState == True:
                     self.emit(QtCore.SIGNAL(_fromUtf8("refresh(QString)")),_fromUtf8("refresh"))
