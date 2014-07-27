@@ -9,7 +9,6 @@ try:
 except AttributeError:
     def _fromUtf8(s):
         return s
-
 try:
     _encoding = QtGui.QApplication.UnicodeUTF8
     def _translate(context, text, disambig):
