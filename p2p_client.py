@@ -301,8 +301,6 @@ class P2P_Client(QtGui.QWidget):
         '''数据包解析'''
         global loginState,recvState,sendState
         global sendSock,recvSock
-        print 'sendSocket:',sendSock,'   recvSocket:',recvSock,'   sock:',sock,'     '
-        print 'sendHost:',sendHost,'  sendPort:',sendPort
         data = str(data)
         if len(data) > 1:
             op = data[0]
@@ -318,21 +316,23 @@ class P2P_Client(QtGui.QWidget):
                 ip, port = data[2:].split(":")
                 print("%s:%s 请求打洞 "%(ip,port))
                 setRecvHostPort(ip,port)
+                print '从',recvHost,':',recvPort,'接收数据'
                 recvState = True
                 if act == HOLE1:
                     dat = CONNECTWHO + HOLE2 + str(ip) + ':' + str(port)
                     recvSock,sendSock = sock, recvSock
                     self.UDPHole(ip,port,sock)
+                    sendSock.sendto(dat,(HOST,PORT))
                 else:
                     dat = OPERATESUCCESS + sendHost + ':' + str(sendPort)
                     self.UDPHole(ip,port,recvSock)
                     sendState = True
-                if dat:
-                    sock.sendto(dat,(HOST,PORT))
+                    recvSock.sendto(dat,(HOST,PORT))
             elif op == OPERATESUCCESS:
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
                 setSendHostPort(ip,port)
+                print '向对方: ',sendHost,':',sendPort,' 发送数据'
                 sendState = True
                 sendSock = recvSock
             else:
@@ -408,6 +408,7 @@ class P2P_Client(QtGui.QWidget):
         sock.sendto(dat,(HOST,PORT))
         print(text)
         setSendHostPort(host,port)
+        print '向对方: ',sendHost,':',sendPort,' 发送数据'
         sendSock = sock
 
     def closeEvent(self, QCloseEvent):
@@ -583,8 +584,9 @@ ThreadedUDPRecvRequestHandler = ThreadedUDPSendRequestHandler
 
 def startThrdUDPSendServer():
     global sock,proc
+    host,port = '',9999
     SocketServer.ThreadingUDPServer.allow_reuse_address = True   #地址重用
-    server = SocketServer.ThreadingUDPServer((HOST, PORT), ThreadedUDPSendRequestHandler,False)  #创建对象实例,False表示不绑定本地端口
+    server = SocketServer.ThreadingUDPServer((host, port), ThreadedUDPSendRequestHandler)  #创建对象实例,False表示不绑定本地端口
     server.request_queue_size = 20      # 等待队列
     server.max_packet_size = 8192*200   # 缓冲区大小
     sock = server.socket                # 把sock保存为全局变量，供其他线程使用
@@ -597,8 +599,9 @@ def startThrdUDPSendServer():
 
 def startThrdUDPRecvServer():
     global proc,recvSock,recvState
+    host,port = '',12345
     SocketServer.ThreadingUDPServer.allow_reuse_address = True   #地址重用
-    server = SocketServer.ThreadingUDPServer((HOST, PORT), ThreadedUDPRecvRequestHandler,False)  #创建对象实例,False表示不绑定本地端口
+    server = SocketServer.ThreadingUDPServer((host, port), ThreadedUDPRecvRequestHandler)  #创建对象实例,False表示不绑定本地端口
     server.request_queue_size = 20      # 等待队列
     server.max_packet_size = 8192*200   # 缓冲区大小
     recvSock = server.socket                # 把recvSock保存为全局变量，供其他线程使用
