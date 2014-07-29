@@ -306,7 +306,7 @@ class P2P_Client(QtGui.QWidget):
             op = data[0]
             if op==PICHEAD:
                 self.picdata = data[1:]
-                print("recv: %d bit" % len(data)-1)
+                print("recv: %d bit" % (len(data)-1))
                 recvState = True
                 self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
             elif op == GETLIST:
@@ -315,14 +315,15 @@ class P2P_Client(QtGui.QWidget):
                 act = str(data[1])
                 ip, port = data[2:].split(":")
                 print("%s:%s 请求打洞 "%(ip,port))
-                self.UDPHole(ip,port)
                 setRecvHostPort(ip,port)
                 recvState = True
                 if act == HOLE1:
                     dat = CONNECTWHO + HOLE2 + str(ip) + ':' + str(port)
                     recvSock,sendSock = sock, recvSock
+                    self.UDPHole(ip,port,sock)
                 else:
                     dat = OPERATESUCCESS + sendHost + ':' + str(sendPort)
+                    self.UDPHole(ip,port,recvSock)
                     sendState = True
                 if dat:
                     sock.sendto(dat,(HOST,PORT))
@@ -353,18 +354,18 @@ class P2P_Client(QtGui.QWidget):
             elif data == HOLE:
                 print('收到打洞数据包,打洞成功')
             elif data == DISCONNECT:
-                stopTrans()
+                sendState = False
             else:
                 print("unknown exception!:"+data)
                 pass
 
-    def UDPHole(self,host,port):
+    def UDPHole(self,host,port,skt):
         '''UDP打洞发包'''
         port = int(port)
         try:
-            sendsock.sendto(HOLE,(host,port))
-            sendsock.sendto(HOLE,(host,port))
-            sendsock.sendto(HOLE,(host,port))
+            skt.sendto(HOLE,(host,port))
+            skt.sendto(HOLE,(host,port))
+            skt.sendto(HOLE,(host,port))
             print("向%s:%d发送打洞包数据！"%(host,port))
         except Exception as e:
             print(e)
@@ -624,8 +625,8 @@ def SendFrame():
             img = cv.QueryFrame(capture)
             cv.Resize(img,new_img,0)
             pic = PICHEAD + new_img.tostring()
-            sendsock.sendto(pic,(sendHost,sendPort))
-            print('send %d bit' % len(pic)-1)
+            sendSock.sendto(pic,(sendHost,sendPort))
+            print('send %d bit' % (len(pic)-1))
             time.sleep(1./8)
         else:
             time.sleep(1)
