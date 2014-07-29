@@ -131,6 +131,7 @@ def setSendHostPort(host,port):
 
 def setRecvHostPort(host,port):
     global recvHost,recvPort
+    lock.acquire()
     recvHost = str(host)
     recvPort = int(port)
     lock.release()
@@ -299,6 +300,7 @@ class P2P_Client(QtGui.QWidget):
     def ParseCmd(self,data):
         '''数据包解析'''
         global loginState,recvState,sendState
+        global sendSock,recvSock
         data = str(data)
         if len(data) > 1:
             op = data[0]
@@ -310,9 +312,7 @@ class P2P_Client(QtGui.QWidget):
             elif op == GETLIST:
                 self.refresh(data.strip()[1:])
             elif op == CONNECTWHO:
-                act = data[1]
-                if act != HOLE2 or act != HOLE1:
-                    return
+                act = str(data[1])
                 ip, port = data[2:].split(":")
                 print("%s:%s 请求打洞 "%(ip,port))
                 self.UDPHole(ip,port)
@@ -320,6 +320,7 @@ class P2P_Client(QtGui.QWidget):
                 recvState = True
                 if act == HOLE1:
                     dat = CONNECTWHO + HOLE2 + str(ip) + ':' + str(port)
+                    recvSock,sendSock = sock, recvSock
                 else:
                     dat = OPERATESUCCESS + sendHost + ':' + str(sendPort)
                     sendState = True
@@ -330,6 +331,7 @@ class P2P_Client(QtGui.QWidget):
                 print("打洞成功! %s:%s" % (ip,port))
                 setSendHostPort(ip,port)
                 sendState = True
+                sendSock = recvSock
             else:
                 print('==== ', ' ====')
         else:
@@ -395,6 +397,7 @@ class P2P_Client(QtGui.QWidget):
             self.ui.melabel.setPixmap(QtGui.QPixmap.fromImage(pic))
 
     def ListWigetDoubleClickedFun(self,item):
+        global sendSock,sock
         text = str(item.text())
         host,port = text.split(':')
         port = int(port)
@@ -402,13 +405,14 @@ class P2P_Client(QtGui.QWidget):
         sock.sendto(dat,(HOST,PORT))
         print(text)
         setSendHostPort(host,port)
+        sendSock = sock
 
     def closeEvent(self, QCloseEvent):
         '''重定义点击关闭按钮事件'''
         self.logout(False)
         if sendPort:
-            sendsock.sendto(DISCONNECT,(sendHost,int(sendPort)))
-            sendsock.sendto(DISCONNECT,(sendHost,int(sendPort)))
+            sock.sendto(DISCONNECT,(sendHost,int(sendPort)))
+            sock.sendto(DISCONNECT,(sendHost,int(sendPort)))
 
     def startShowVideo(self):
         '''开始后台控制图片采集时间线程'''
