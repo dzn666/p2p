@@ -47,6 +47,7 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
 		    dstport = int(dstport)
 		    dat = PICHEAD + str(ip) + ':' + str(port) + '#' + dat
 		    sock.sendto(dat,(dsthost,dstport))
+		    # Transmit(dat,dsthost,int(dstport))
                     break
         elif data[0] == HEARTBEAT:
             HeartBeat(((ip,port),sock))
@@ -55,9 +56,9 @@ class ThreadedUDPRequestHandler(SocketServer.BaseRequestHandler):
             lst = GETLIST + str(lst)
             sock.sendto(lst,(ip,port))
         elif data[0] == CONNECTWHO:
-            host,port1 = str(data[1:]).split(':')
+            host,port1 = str(data[2:]).split(':')
             port1 = int(port1)
-            dat = CONNECTWHO + str(ip) + ':' + str(port)
+            dat = CONNECTWHO + data[1] + str(ip) + ':' + str(port)
             print('connect to ')
             sock.sendto(dat,(host,port1))
         elif data[0] == LOGIN:
@@ -119,10 +120,6 @@ def UpdateTime((ip,port), socket):
                 LIST.remove(((_ip,_port),_socket,_last_time))
                 LIST.append(((_ip,_port), _socket, tm))
                 break
-            else:
-                LIST.remove(((_ip,_port),_socket,_last_time))
-                LIST.append(((_ip,_port), socket, tm))
-                break
     lock.release()
 
 def GetList(ip,port):
@@ -144,6 +141,11 @@ def ConnectTo((ip,port),(dst_ip,dst_port)):
             return True
         else:
             return False
+
+def Transmit(data,dst_ip,dst_port):
+    for (_ip,_port),_socket,_last_time in LIST:
+        if dst_ip==_ip and dst_port==int(_port):
+            _socket.sendto(data, (dst_ip,int(dst_port)))
 
 def HeartBeat(((ip,port),socket)):
     UpdateTime((ip,port),socket)
