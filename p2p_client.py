@@ -301,12 +301,14 @@ class P2P_Client(QtGui.QWidget):
         '''数据包解析'''
         global loginState,recvState,sendState
         global sendSock,recvSock
+        print 'sendSocket:',sendSock,'   recvSocket:',recvSock,'   sock:',sock,'     '
+        print 'sendHost:',sendHost,'  sendPort:',sendPort
         data = str(data)
         if len(data) > 1:
             op = data[0]
             if op==PICHEAD:
                 self.picdata = data[1:]
-                print("recv: %d bit" % (len(data)-1))
+                #print("recv: %d bit" % (len(data)-1))
                 recvState = True
                 self.emit(QtCore.SIGNAL(_fromUtf8("PicIn()")))
             elif op == GETLIST:
@@ -626,7 +628,7 @@ def SendFrame():
             cv.Resize(img,new_img,0)
             pic = PICHEAD + new_img.tostring()
             sendSock.sendto(pic,(sendHost,sendPort))
-            print('send %d bit' % (len(pic)-1))
+            # print('send %d bit' % (len(pic)-1))
             time.sleep(1./8)
         else:
             time.sleep(1)
