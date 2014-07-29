@@ -316,7 +316,6 @@ class P2P_Client(QtGui.QWidget):
                 ip, port = data[2:].split(":")
                 print("%s:%s 请求打洞 "%(ip,port))
                 setRecvHostPort(ip,port)
-                print '从',recvHost,':',recvPort,'接收数据'
                 recvState = True
                 if act == HOLE1:
                     dat = CONNECTWHO + HOLE2 + str(ip) + ':' + str(port)
@@ -328,6 +327,7 @@ class P2P_Client(QtGui.QWidget):
                     self.UDPHole(ip,port,recvSock)
                     sendState = True
                     recvSock.sendto(dat,(HOST,PORT))
+                print '从',recvHost,':',recvPort,'接收数据'
             elif op == OPERATESUCCESS:
                 ip, port = data[1:].split(":")
                 print("打洞成功! %s:%s" % (ip,port))
